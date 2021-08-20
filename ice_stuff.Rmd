@@ -1,0 +1,90 @@
+---
+title: "Untitled"
+author: "Allie Cole"
+date: "8/20/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(here)
+library(tidyverse)
+library(janitor)
+library(patchwork)
+library(ggrepel)  #replusive labels
+library(gghighlight) 
+library(paletteer) #for colors 
+library(ggExtra) #for marginal plots
+library(ggbeeswarm)
+```
+
+```{r}
+#uploading teh data 
+
+meto_data <- read_csv(here("data", "ntl20_v6.csv"), na = c("-999", "NaN"))
+
+ice_data <- ice_data <- read_csv(here("data", "ntl33_v7.csv"), na = c("-999", "NaN"))
+```
+
+
+```{r}
+ggplot(data = ice_data, aes(x = lakeid, y = ice_duration)) +
+  geom_beeswarm(aes(color = year4)) +
+  geom_boxplot(fill = NA)
+```
+
+```{r}
+mean_ice <- ice_data %>% 
+  group_by(year4) %>% 
+  summarise(mean = mean(ice_duration, na.rm = TRUE))
+```
+
+```{r}
+ggplot(data = mean_ice, aes(x = year4, y = mean)) +
+  geom_point() 
+
+#the overall trend here seems to be that over time that average duration of the ice at these lake sites is decreasing. 
+```
+
+
+```{r}
+mean_air <- meto_data %>% 
+  filter(month == c(12, 1, 2)) %>% 
+  group_by(year4) %>% 
+  summarize(mean_air_temp = mean(ave_air_temp_adjusted, na.rm = TRUE))
+
+ggplot(data = mean_air, aes(x = year4, y = mean_air_temp)) +
+  geom_point() 
+
+#This plot shows a slight positive linear trend, where the average air temperature increases with time. However there is a large amount of variation 
+```
+
+
+```{r}
+together <- mean_air %>% 
+  full_join(mean_ice, by = "year4")
+
+ggplot(data = together, aes(x = mean, y = mean_air_temp)) +
+  geom_point() +
+  labs(x = "Average ice duration", 
+       y = "Average air temperature") 
+
+# this plot has a slight negatively linear trend, where the ice duration is shorter when the temperature is higher
+```
+
+```{r}
+ice_subset <- ice_data %>% 
+  filter(year4 >= 1970) %>% 
+  mutate(date = as.Date(ice_off)) %>% 
+  mutate(yday = lubridate::yday(date))
+  
+  
+ggplot(data = ice_subset, aes(x = year4, y = yday)) +
+  geom_point(aes(color = lakeid), show.legend = FALSE) +
+  facet_wrap(facets = "lakeid")
+
+#For all the lakes there is a downward trend in the day of the year over time, meaning the ice is melting sooner than it used to. 
+
+```
+
+
